@@ -6,8 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 /* ===
-ml5 Example
-PoseNet example using p5.js
+Super Collider
 === */
 
 let video;
@@ -18,22 +17,27 @@ let poses = [];
 let nose;
 let positionHistory = {}
 
-let numBalls = 53;
-let spring = 0.05;
+let numBalls = 20;
+let spring = 0.02;
 let gravity = 0.01;
-let friction = -0.2;
+let friction = -0.1;
 let balls = [];
 let leftWristPosition;
 let rightWristPosition;
 
 let poseClasses = ["A","B","C"]
 let currentPrediction = "";
-
-
-
+let wristDiameter = 100;
+let untouchedColor;
+let touchedColor;
+let minBallSize = 70;
+let maxBallSize = 120;
+let touchedBallSize = 40;
+let lastTouchedID = -1;
 
 function setup() {
-  createCanvas(640, 480);
+  //createCanvas(640, 480);
+  createCanvas((window.innerHeight * (4/3)), window.innerHeight);
   video = createCapture(VIDEO);
   video.size(width, height);
 
@@ -49,7 +53,9 @@ function setup() {
   video.hide();
 
   createButtons();
-  // textSize(16);
+
+  untouchedColor = color(255,255,255,204);		// color of balls before being touched
+  touchedColor = color(255,0,0,204);			// color of balls once touched
   addBalls();
 }
 
@@ -202,12 +208,13 @@ function loadMyKNN() {
     knnClassifier.load('./myKNN.json', updateCounts);
 }
 
+
 function addBalls() {
 	for (let i = 0; i < numBalls; i++) {
     balls[i] = new Ball(
       random(width),
       random(height),
-      random(30, 70),
+      random(minBallSize, maxBallSize),
       i,
       balls
     );
@@ -215,11 +222,9 @@ function addBalls() {
   noStroke();
 }
 
-
-
 function drawBalls() {
   balls.forEach(ball => {
-    fill(255,0,0, 204);
+    fill(ball.color);
     noStroke();
     ball.collide();
     
@@ -237,10 +242,6 @@ function drawKeypoints()  {
   for (let i = 0; i < poses.length; i++) {
     // For each pose detected, loop through all the keypoints
     let pose = poses[i].pose;
-
-    // if (!positionHistory[i]) {
-    //   positionHistory[i] = {}
-    // }
     
     for (let j = 0; j < pose.keypoints.length; j++) {
       
@@ -253,8 +254,6 @@ function drawKeypoints()  {
       // Only draw an ellipse is the pose probability is bigger than 0.2
       if (score > 0.2) {
    			
-        
-        
         if (part == "leftWrist" || part == "rightWrist") {
           
           if (part == "leftWrist") {
@@ -263,20 +262,19 @@ function drawKeypoints()  {
             rightWristPosition = position;
           }
           
-					// fill(255, 0, 0); 
-        	// noStroke();
-          strokeWeight(8);
-          stroke('rgb(0,255,0)');
-          point(position.x, position.y);
+          strokeWeight(4);
+          stroke('rgb(255,231,66)');
+          noFill();
+          // point(position.x, position.y);
+          ellipse(position.x, position.y, wristDiameter, wristDiameter);
         
       	} else {
-          // fill(0, 255, 0); 
-        	// noStroke();
+          // fill(0, 255, 0);
           strokeWeight(2);
           stroke('rgb(0,0,255)');
           point(position.x, position.y);
-          
         }
+
       }
     }
   }
@@ -297,77 +295,64 @@ function drawSkeleton() {
   }
 }
 
-
-
-
-
-
 class Ball {
   constructor(xin, yin, din, idin, oin) {
     this.x = xin;
     this.y = yin;
+    this.color = untouchedColor;
     this.vx = 0;
     this.vy = 0;
     this.diameter = din;
     this.id = idin;
     this.others = oin;
+    this.status = "untouched";
   }
 
-  collideWrists(leftWristPosition, rightWristPosition) {
-			if (leftWristPosition) {
-        let dx = leftWristPosition.x - this.x;
-        let dy = leftWristPosition.y - this.y;
-        let distance = sqrt(dx * dx + dy * dy);
+  // A right or left wrist collides with a ball
+  collideWrists(leftWristPosition, rightWristPosition) {	  
+  	if (leftWristPosition) {
+  	  this.touch(leftWristPosition);
+  	}
+  	if (rightWristPosition) {
+  	  this.touch(rightWristPosition);
+  	}
+  }
+  
+    // Change the properties of the ball on collision
+  touch(wristPosition) {
+	  	
+    let dx = wristPosition.x - this.x;
+    let dy = wristPosition.y - this.y;
+    let distance = sqrt(dx * dx + dy * dy);
+    let minDist = wristDiameter / 2 + this.diameter / 2;
 
+    // console.log(distance);
+    // console.log(minDist);
 
-        let minDist = 1 + this.diameter / 2;
+    if (distance < minDist) {
+      //console.log("2");
+      let angle = atan2(dy, dx);
+      let targetX = this.x + cos(angle) * minDist;
+      let targetY = this.y + sin(angle) * minDist;
+      let ax = (targetX - wristPosition.x) * spring*50;
+      let ay = (targetY - wristPosition.y) * spring*50;
+      this.vx -= ax;
+      this.vy -= ay;
 
-
-        if (currentPrediction == 'A') {
-          minDist = 50;
-        }
-        //   console.log(distance);
-        //console.log(minDist);
-        if (distance < minDist) {
-          //console.log("2");
-          let angle = atan2(dy, dx);
-          let targetX = this.x + cos(angle) * minDist;
-          let targetY = this.y + sin(angle) * minDist;
-          let ax = (targetX - leftWristPosition.x) * spring*50;
-          let ay = (targetY - leftWristPosition.y) * spring*50;
-
-          if (currentPrediction == 'A') {
-            this.vx = dx - this.x;
-            this.vy = dy - this.y;
-          } else {
-            this.vx -= ax;
-            this.vy -= ay;
-          }
-          
-
-        }
+	  // change the color of the ball if it hasn't just been collided with            
+      if (this.id != lastTouchedID) {
+	      if (this.status == "untouched") {
+	          this.color = touchedColor;
+	          this.status = "touched";
+	          this.diameter = touchedBallSize;
+	      } else {
+	          this.color = untouchedColor;
+	          this.status = "untouched";
+	          this.diameter = random(minBallSize, maxBallSize);
+	      }
+	      lastTouchedID = this.id;
       }
-    
-    if (rightWristPosition) {
-        let dx = rightWristPosition.x - this.x;
-        let dy = rightWristPosition.y - this.y;
-        let distance = sqrt(dx * dx + dy * dy);
-        let minDist = 1 + this.diameter / 2;
-        //   console.log(distance);
-        //console.log(minDist);
-        if (distance < minDist) {
-          //console.log("2");
-          let angle = atan2(dy, dx);
-          let targetX = this.x + cos(angle) * minDist;
-          let targetY = this.y + sin(angle) * minDist;
-          let ax = (targetX - rightWristPosition.x) * spring*50;
-          let ay = (targetY - rightWristPosition.y) * spring*50;
-          this.vx -= ax;
-          this.vy -= ay;
-        }
-      }
-    
-    
+    }
   }
   
   collide() {
@@ -418,7 +403,4 @@ class Ball {
     ellipse(this.x, this.y, this.diameter, this.diameter);
   }
 }
-
-
-
 
