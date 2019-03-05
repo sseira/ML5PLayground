@@ -17,7 +17,7 @@ let poses = [];
 let nose;
 let positionHistory = {}
 
-let numBalls = 20;
+let numBalls = 1//20;
 let spring = 0.02;
 let gravity = 0.01;
 let friction = -0.1;
@@ -214,9 +214,18 @@ function gotResults(err, result) {
     // result.label is the label that has the highest confidence
     if (result.label) {
       currentPrediction = result.label;
+
+      // if (currentPrediction == 'A') {
+      //   filter(BLUR, 3);
+      // } else {
+      //   filter()
+      // }
+
       select('#result').html(result.label);
       select('#confidence').html(`${confidences[result.label] * 100} %`);
     }
+
+
 
     select('#confidenceA').html(`${confidences['A'] ? confidences['A'] * 100 : 0} %`);
     select('#confidenceB').html(`${confidences['B'] ? confidences['B'] * 100 : 0} %`);
@@ -266,17 +275,39 @@ function addBalls() {
 }
 
 function drawBalls() {
+  let isGameOver = true
   balls.forEach(ball => {
     fill(ball.color);
     noStroke();
     ball.collide();
+<<<<<<< HEAD
 
+=======
+    if (ball.status == 'untouched') {
+      isGameOver = false
+    }
+>>>>>>> f1940c2af80df36467d4405c78022fb5f42a1250
     ball.collideWrists(leftWristPosition, rightWristPosition);
 
 
     ball.move();
     ball.display();
   });
+
+  if (isGameOver) {
+    gameOver()
+  }
+}
+
+function gameOver() {
+  console.log('gameOver')
+  balls.forEach(ball => {
+
+
+    
+    // ball.destroy();
+  })
+
 }
 
 // A function to draw ellipses over the detected keypoints
