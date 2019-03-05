@@ -1,3 +1,5 @@
+
+
 // Copyright (c) 2018 ml5
 //
 // This software is released under the MIT License.
@@ -9,6 +11,8 @@ PoseNet example using p5.js
 === */
 
 let video;
+let knnClassifier;
+
 let poseNet;
 let poses = [];
 let nose;
@@ -22,6 +26,10 @@ let balls = [];
 let leftWristPosition;
 let rightWristPosition;
 
+let poseClasses = ["A","B","C"]
+let currentPrediction = "";
+
+
 
 
 function setup() {
@@ -31,6 +39,7 @@ function setup() {
 
   // Create a new poseNet method with a single detection
   poseNet = ml5.poseNet(video, modelReady);
+  knnClassifier = ml5.KNNClassifier();
   // This sets up an event that fills the global variable "poses"
   // with an array every time new poses are detected
   poseNet.on('pose', function(results) {
@@ -38,8 +47,9 @@ function setup() {
   });
   // Hide the video element, and just show the canvas
   video.hide();
-  nose = loadImage("nose.png");
-  textSize(16);
+
+  createButtons();
+  // textSize(16);
   addBalls();
 }
 
@@ -59,9 +69,138 @@ function draw() {
   // We can call both functions to draw all keypoints and the skeletons
   drawKeypoints();
   drawBalls();
-  //drawSkeleton();
+  // drawSkeleton();
 }
 
+// Add the current frame from the video to the classifier
+function addExample(label) {
+  // Convert poses results to a 2d array [[score0, x0, y0],...,[score16, x16, y16]]
+  const poseArray = poses[0].pose.keypoints.map(p => [p.score, p.position.x, p.position.y]);
+
+  // Add an example with a label to the classifier
+  knnClassifier.addExample(poseArray, label);
+  updateCounts();
+}
+
+// Update the example count for each label  
+function updateCounts() {
+  const counts = knnClassifier.getCountByLabel();
+
+  select('#exampleA').html(counts['A'] || 0);
+  select('#exampleB').html(counts['B'] || 0);
+  // select('#exampleC').html(counts['C'] || 0);
+}
+
+// A util function to create UI buttons
+function createButtons() {
+  // When the A button is pressed, add the current frame
+  // from the video with a label of "A" to the classifier
+  buttonA = select('#addClassA');
+  buttonA.mousePressed(function() {
+    addExample('A');
+  });
+
+  // When the B button is pressed, add the current frame
+  // from the video with a label of "B" to the classifier
+  buttonB = select('#addClassB');
+  buttonB.mousePressed(function() {
+    addExample('B');
+  });
+
+  // Reset buttons
+  resetBtnA = select('#resetA');
+  resetBtnA.mousePressed(function() {
+    clearLabel('A');
+  });
+  
+  resetBtnB = select('#resetB');
+  resetBtnB.mousePressed(function() {
+    clearLabel('B');
+  });
+
+  // Predict button
+  buttonPredict = select('#buttonPredict');
+  buttonPredict.mousePressed(classify);
+
+  // Clear all classes button
+  buttonClearAll = select('#clearAll');
+  buttonClearAll.mousePressed(clearAllLabels);
+  
+  
+  // // Load saved classifier dataset
+  // buttonSetData = select('#load');
+  // buttonSetData.mousePressed(loadMyKNN);
+
+  // // Get classifier dataset
+  // buttonGetData = select('#save');
+  // buttonGetData.mousePressed(saveMyKNN);
+  
+  
+}
+
+// Predict the current frame.
+function classify() {
+  // Get the total number of labels from knnClassifier
+  const numLabels = knnClassifier.getNumLabels();
+  if (numLabels <= 0) {
+    console.error('There is no examples in any label');
+    return;
+  }
+  // Convert poses results to a 2d array [[score0, x0, y0],...,[score16, x16, y16]]
+  const poseArray = poses[0].pose.keypoints.map(p => [p.score, p.position.x, p.position.y]);
+
+  // Use knnClassifier to classify which label do these features belong to
+  // You can pass in a callback function `gotResults` to knnClassifier.classify function
+  knnClassifier.classify(poseArray, gotResults);
+}
+
+// Show the results
+function gotResults(err, result) {
+  // Display any error
+  if (err) {
+    console.error(err);
+  }
+
+  if (result.confidencesByLabel) {
+    const confidences = result.confidencesByLabel;
+    // result.label is the label that has the highest confidence
+    if (result.label) {
+      currentPrediction = result.label;
+      select('#result').html(result.label);
+      select('#confidence').html(`${confidences[result.label] * 100} %`);
+    }
+
+    select('#confidenceA').html(`${confidences['A'] ? confidences['A'] * 100 : 0} %`);
+    select('#confidenceB').html(`${confidences['B'] ? confidences['B'] * 100 : 0} %`);
+  }
+
+  classify();
+}
+
+
+
+// Clear the examples in one label
+function clearLabel(classLabel) {
+  knnClassifier.clearLabel(classLabel);
+  updateCounts();
+}
+
+// Clear all the examples in all labels
+function clearAllLabels() {
+  knnClassifier.clearAllLabels();
+  updateCounts();
+}
+
+
+// Save dataset as myKNNDataset.json
+function saveMyKNN() {
+    knnClassifier.save('myKNN');
+}
+
+// Load dataset to the classifier
+function loadMyKNN() {
+    knnClassifier.load('./myKNN.json', updateCounts);
+}
 
 function addBalls() {
 	for (let i = 0; i < numBalls; i++) {
@@ -138,29 +277,6 @@ function drawKeypoints()  {
           point(position.x, position.y);
           
         }
-
-        
-        
-        //ellipse(keypoint.position.x, keypoint.position.y, 10, 10);
-        
-//         for( var oldPoint=0; oldPoint < positionHistory[i][j].length-1; oldPoint++) {
-//           let previousPosition = positionHistory[i][j][oldPoint]
-//           let previousPreviousPoint = positionHistory[i][j][oldPoint+1]
-//           let opacity = (100-oldPoint)/400
-          
-//           // line(previousPosition.x, previousPosition.y, previousPreviousPoint.x, previousPreviousPoint.y)
-//           // text(j, previousPosition.x, previousPosition.y);
-//         }
-        
-        
-        
-        // if (j == 0) {
-        //   push();
-        //   imageMode(CENTER);
-        //   image(nose,keypoint.position.x, keypoint.position.y, 50, 50);
-        //   pop();
-        //   //text("NOSE", keypoint.position.x + -15, keypoint.position.y + 15);
-        // }
       }
     }
   }
@@ -202,7 +318,14 @@ class Ball {
         let dx = leftWristPosition.x - this.x;
         let dy = leftWristPosition.y - this.y;
         let distance = sqrt(dx * dx + dy * dy);
+
+
         let minDist = 1 + this.diameter / 2;
+
+
+        if (currentPrediction == 'A') {
+          minDist = 50;
+        }
         //   console.log(distance);
         //console.log(minDist);
         if (distance < minDist) {
@@ -212,8 +335,15 @@ class Ball {
           let targetY = this.y + sin(angle) * minDist;
           let ax = (targetX - leftWristPosition.x) * spring*50;
           let ay = (targetY - leftWristPosition.y) * spring*50;
-          this.vx -= ax;
-          this.vy -= ay;
+
+          if (currentPrediction == 'A') {
+            this.vx = dx - this.x;
+            this.vy = dy - this.y;
+          } else {
+            this.vx -= ax;
+            this.vy -= ay;
+          }
+          
 
         }
       }
@@ -289,30 +419,6 @@ class Ball {
   }
 }
 
-
-
-
-
-
-
-         // store position history
-//         if (positionHistory[i][j]) {
-          
-          
-          
-// 						// if (Math.abs(positionHistory[i][j][0].x - keypoint.position.x) > maxDistanceTraveled) {
-// 						// print(Math.abs(positionHistory[i][j][0].x - keypoint.position.x))
-// 						// continue;
-// 						// }
-//          positionHistory[i][j].unshift(keypoint.position)
-          
-//           if (positionHistory[i][j].length >= 100) {
-//             positionHistory[i][j] = positionHistory[i][j].slice(0, 100)
-//           }
-//           //need to delete old positons
-//         } else {
-//          positionHistory[i][j] =[keypoint.position]
-//         }
 
 
 
