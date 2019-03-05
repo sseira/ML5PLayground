@@ -13,8 +13,8 @@ let poses = [];
 let nose;
 let positionHistory = {}
 
-let numBalls = 50;
-let spring = 0.05;
+let numBalls = 20;
+let spring = 0.02;
 let gravity = 0.01;
 let friction = -0.1;
 let balls = [];
@@ -24,6 +24,9 @@ let rightWristPosition;
 let wristDiameter = 100;
 let untouchedColor;
 let touchedColor;
+let minBallSize = 70;
+let maxBallSize = 120;
+let touchedBallSize = 40;
 let lastTouchedID = -1;
 
 function setup() {
@@ -68,21 +71,18 @@ function draw() {
   //drawSkeleton();
 }
 
-
 function addBalls() {
 	for (let i = 0; i < numBalls; i++) {
     balls[i] = new Ball(
       random(width),
       random(height),
-      random(30, 70),
+      random(minBallSize, maxBallSize),
       i,
       balls
     );
   }
   noStroke();
 }
-
-
 
 function drawBalls() {
   balls.forEach(ball => {
@@ -124,8 +124,8 @@ function drawKeypoints()  {
             rightWristPosition = position;
           }
           
-          strokeWeight(1);
-          stroke('rgb(255,0,0)');
+          strokeWeight(4);
+          stroke('rgb(255,231,66)');
           noFill();
           // point(position.x, position.y);
           ellipse(position.x, position.y, wristDiameter, wristDiameter);
@@ -156,11 +156,6 @@ function drawSkeleton() {
     }
   }
 }
-
-
-
-
-
 
 class Ball {
   constructor(xin, yin, din, idin, oin) {
@@ -211,9 +206,11 @@ class Ball {
 	      if (this.status == "untouched") {
 	          this.color = touchedColor;
 	          this.status = "touched";
+	          this.diameter = touchedBallSize;
 	      } else {
 	          this.color = untouchedColor;
 	          this.status = "untouched";
+	          this.diameter = random(minBallSize, maxBallSize);
 	      }
 	      lastTouchedID = this.id;
       }
@@ -268,31 +265,5 @@ class Ball {
     ellipse(this.x, this.y, this.diameter, this.diameter);
   }
 }
-
-
-
-
-
-
-
-         // store position history
-//         if (positionHistory[i][j]) {
-          
-          
-          
-// 						// if (Math.abs(positionHistory[i][j][0].x - keypoint.position.x) > maxDistanceTraveled) {
-// 						// print(Math.abs(positionHistory[i][j][0].x - keypoint.position.x))
-// 						// continue;
-// 						// }
-//          positionHistory[i][j].unshift(keypoint.position)
-          
-//           if (positionHistory[i][j].length >= 100) {
-//             positionHistory[i][j] = positionHistory[i][j].slice(0, 100)
-//           }
-//           //need to delete old positons
-//         } else {
-//          positionHistory[i][j] =[keypoint.position]
-//         }
-
 
 
