@@ -17,7 +17,7 @@ let poses = [];
 let nose;
 let positionHistory = {}
 
-let numBalls = 1//20;
+let numBalls = 3; //20
 let spring = 0.02;
 let gravity = 0.01;
 let friction = -0.1;
@@ -34,6 +34,8 @@ let minBallSize = 70;
 let maxBallSize = 120;
 let touchedBallSize = 40;
 let lastTouchedID = -1;
+
+let destroyTimer = 2; // seconds
 
 function setup() {
   //createCanvas(640, 480);
@@ -242,7 +244,6 @@ function drawBalls() {
     }
     ball.collideWrists(leftWristPosition, rightWristPosition);
     
-  	
     ball.move();
     ball.display();
   });
@@ -252,15 +253,15 @@ function drawBalls() {
   }
 }
 
+// do some cool shit when you get them all
 function gameOver() {
   console.log('gameOver')
   balls.forEach(ball => {
-
-
-    
-    // ball.destroy();
-  })
-
+//  	ball.destroy();
+	if (ball.status != "destroyed") {
+		ball.destroy();
+	}
+  });
 }
 
 // A function to draw ellipses over the detected keypoints
@@ -380,6 +381,24 @@ class Ball {
 	      lastTouchedID = this.id;
       }
     }
+  }
+  
+  // get rid of a ball
+  destroy() {
+	  let timer = destroyTimer;
+	  
+	  // animate the ball to disappear
+	  if (this.status != "destroyed" && (frameCount % 10 == 0 && timer > 0)) {
+		  this.diameter = this.diameter / 2;
+		  timer--;
+	  }
+	  
+	  // actually get rid of it from the array
+	  if (timer <= 0) {
+		  this.status = "destroyed";
+		  ball.splice(id,1);	// remove the ball
+		  console.log(this.id + "destroyed");
+	  }
   }
   
   collide() {
