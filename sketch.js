@@ -17,23 +17,28 @@ let poses = [];
 let nose;
 let positionHistory = {}
 
-let numBalls = 1//20;
+let numBalls = 20;
 let spring = 0.02;
 let gravity = 0.01;
-let friction = -0.1;
+let friction = 0.05;//-0.1;
 let balls = [];
-let leftWristPosition;
-let rightWristPosition;
+let leftWristPosition = {x:0, y:0};
+let rightWristPosition = {x:0, y:0};
 
 let poseClasses = ["A","B","C"]
 let currentPrediction = "";
 let wristDiameter = 100;
-let untouchedColor;
-let touchedColor;
+let untouchedColor;    // color of balls before being touched
+let touchedColor;   // color of balls once touched
+let frozenColor;// color of balls during frozone
+let magnetoColor;// color of balls during frozone
+
 let minBallSize = 70;
 let maxBallSize = 120;
 let touchedBallSize = 40;
 let lastTouchedID = -1;
+let isFrozen = false;
+let isMagento = false;
 
 function setup() {
   //createCanvas(640, 480);
@@ -51,11 +56,13 @@ function setup() {
   });
   // Hide the video element, and just show the canvas
   video.hide();
-
+  untouchedColor = color(255,255,255,204);    // color of balls before being touched
+  touchedColor = color(255,0,0,204);      // color of balls once touched
+  frozenColor = color(100,100,100, 100);
+  magnetoColor = color(200, 100, 8, 100)
   createButtons();
 
-  untouchedColor = color(255,255,255,204);		// color of balls before being touched
-  touchedColor = color(255,0,0,204);			// color of balls once touched
+  
   addBalls();
 }
 
@@ -94,7 +101,7 @@ function updateCounts() {
 
   select('#exampleA').html(counts['A'] || 0);
   select('#exampleB').html(counts['B'] || 0);
-  // select('#exampleC').html(counts['C'] || 0);
+  select('#exampleC').html(counts['C'] || 0);
 }
 
 // A util function to create UI buttons
@@ -113,6 +120,11 @@ function createButtons() {
     addExample('B');
   });
 
+  buttonC = select('#addClassC');
+  buttonC.mousePressed(function() {
+    addExample('C');
+  });
+
   // Reset buttons
   resetBtnA = select('#resetA');
   resetBtnA.mousePressed(function() {
@@ -123,7 +135,14 @@ function createButtons() {
   resetBtnB.mousePressed(function() {
     clearLabel('B');
   });
+  
 
+  // Reset buttons
+  resetBtnA = select('#resetC');
+  resetBtnA.mousePressed(function() {
+    clearLabel('C');
+  });
+  
   // Predict button
   buttonPredict = select('#buttonPredict');
   buttonPredict.mousePressed(classify);
@@ -169,24 +188,34 @@ function gotResults(err, result) {
 
   if (result.confidencesByLabel) {
     const confidences = result.confidencesByLabel;
+
     // result.label is the label that has the highest confidence
     if (result.label) {
       currentPrediction = result.label;
-
-      // if (currentPrediction == 'A') {
-      //   filter(BLUR, 3);
-      // } else {
-      //   filter()
-      // }
-
       select('#result').html(result.label);
       select('#confidence').html(`${confidences[result.label] * 100} %`);
+
+      if (currentPrediction == 'A') {
+        if (!isFrozen) {
+          isFrozen = true;
+          // ball.frozone()
+          setTimeout(() => {
+            isFrozen = false;
+          }, 3000)
+        }
+      } else if (currentPrediction == 'B' && confidences[result.label]>.9) {
+        isMagento = true
+        setTimeout(() => {
+            isMagento = false;
+          }, 3000)
+
+      }
     }
-
-
 
     select('#confidenceA').html(`${confidences['A'] ? confidences['A'] * 100 : 0} %`);
     select('#confidenceB').html(`${confidences['B'] ? confidences['B'] * 100 : 0} %`);
+    select('#confidenceC').html(`${confidences['C'] ? confidences['C'] * 100 : 0} %`);
+
   }
 
   classify();
@@ -234,15 +263,15 @@ function addBalls() {
 function drawBalls() {
   let isGameOver = true
   balls.forEach(ball => {
+
     fill(ball.color);
     noStroke();
     ball.collide();
+
     if (ball.status == 'untouched') {
       isGameOver = false
     }
     ball.collideWrists(leftWristPosition, rightWristPosition);
-    
-  	
     ball.move();
     ball.display();
   });
@@ -257,7 +286,7 @@ function gameOver() {
   balls.forEach(ball => {
 
 
-    
+
     // ball.destroy();
   })
 
@@ -307,20 +336,20 @@ function drawKeypoints()  {
   }
 }
 
-// A function to draw the skeletons
-function drawSkeleton() {
-  // Loop through all the skeletons detected
-  for (let i = 0; i < poses.length; i++) {
-    let skeleton = poses[i].skeleton;
-    // For every skeleton, loop through all body connections
-    for (let j = 0; j < skeleton.length; j++) {
-      let partA = skeleton[j][0];
-      let partB = skeleton[j][1];
-      stroke(255, 0, 0);
-      line(partA.position.x, partA.position.y, partB.position.x, partB.position.y);
-    }
-  }
-}
+// // A function to draw the skeletons
+// function drawSkeleton() {
+//   // Loop through all the skeletons detected
+//   for (let i = 0; i < poses.length; i++) {
+//     let skeleton = poses[i].skeleton;
+//     // For every skeleton, loop through all body connections
+//     for (let j = 0; j < skeleton.length; j++) {
+//       let partA = skeleton[j][0];
+//       let partB = skeleton[j][1];
+//       stroke(255, 0, 0);
+//       line(partA.position.x, partA.position.y, partB.position.x, partB.position.y);
+//     }
+//   }
+// }
 
 class Ball {
   constructor(xin, yin, din, idin, oin) {
@@ -345,6 +374,10 @@ class Ball {
   	}
   }
   
+
+
+
+
     // Change the properties of the ball on collision
   touch(wristPosition) {
 	  	
@@ -367,18 +400,30 @@ class Ball {
       this.vy -= ay;
 
 	  // change the color of the ball if it hasn't just been collided with            
-      if (this.id != lastTouchedID) {
-	      if (this.status == "untouched") {
-	          this.color = touchedColor;
-	          this.status = "touched";
-	          this.diameter = touchedBallSize;
-	      } else {
-	          this.color = untouchedColor;
-	          this.status = "untouched";
-	          this.diameter = random(minBallSize, maxBallSize);
-	      }
-	      lastTouchedID = this.id;
+      this.updateColor()
+    }
+  }
+
+  updateColor() {
+    if (this.id != lastTouchedID) {
+        if (this.status == "untouched") {
+            this.color = touchedColor;
+            this.status = "touched";
+            this.diameter = touchedBallSize;
+        } else {
+            this.color = untouchedColor;
+            this.status = "untouched";
+            this.diameter = random(minBallSize, maxBallSize);
+        }
+        lastTouchedID = this.id;
       }
+  }
+
+  restoreColor() {
+    if (this.status == "untouched") {
+        this.color = untouchedColor;
+    } else {
+        this.color = touchedColor;
     }
   }
   
@@ -406,6 +451,49 @@ class Ball {
     }
   }
 
+  frozone() {
+    if (this.color == untouchedColor) {
+      this.vy = this.vy/2
+      this.vx = this.vx/2
+      fill(frozenColor)
+      this.color = frozenColor
+    }
+  }
+
+  magneto() {
+    let r_dx = rightWristPosition.x - this.x;
+    let r_dy = rightWristPosition.y - this.y;
+    let l_dx = leftWristPosition.x - this.x;
+    let l_dy = leftWristPosition.y - this.y;
+
+    let r_distance = sqrt(r_dx * r_dx + r_dy * r_dy);
+    let l_distance = sqrt(l_dx * l_dx + l_dy * l_dy);
+
+    let closestWristPosition = leftWristPosition
+    if (r_distance < l_distance) {
+      closestWristPosition = rightWristPosition
+    }
+
+    if (this.color == untouchedColor) {
+        this.vx = (closestWristPosition.x - this.x)/100
+        this.vy = (closestWristPosition.y - this.y)/100
+        fill(magnetoColor)
+        this.color = magnetoColor
+    }
+  }
+
+  repello() {
+    this.vy = -this.vy*3
+    this.vx = -this.vx*3
+    this.restoreColor()
+  }
+
+  speedUp() {
+    this.vy = this.vy*3
+    this.vx = this.vx*3
+    this.restoreColor()
+  }
+
   move() {
     this.vy += gravity;
     this.x += this.vx;
@@ -424,6 +512,23 @@ class Ball {
       this.y = this.diameter / 2;
       this.vy *= friction;
     }
+
+    if (isFrozen) {
+      this.frozone()
+    } else {
+      if (this.color == frozenColor) {
+        this.speedUp()
+      }
+    }
+
+    if (isMagento) {
+      this.magneto()
+    } else {
+       if (this.color == magnetoColor) {
+        this.repello()
+      }
+    }
+
   }
 
   display() {
