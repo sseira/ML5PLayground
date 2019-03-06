@@ -47,7 +47,7 @@ let destroyTimer = 2; // seconds
 
 function setup() {
   //createCanvas(640, 480);
-  canvas = createCanvas(window.innerWidth, window.innerHeight);
+  canvas = createCanvas(window.innerHeight * (4/3), window.innerHeight);
   video = createCapture(VIDEO);
   video.size(width, height);
 
@@ -310,7 +310,7 @@ function drawBalls() {
   });
 
   if (isGameOver) {
-    gameOver()
+    gameOver();
   }
 }
 
@@ -323,6 +323,11 @@ function gameOver() {
   		ball.destroy();
   	}
   });
+  
+  textSize(100);
+  textAlign(CENTER);
+  fill (255,0,0);
+  text("Game Over", window.innerHeight * (2/3), window.innerHeight / 2)
 }
 
 // A function to draw ellipses over the detected keypoints
