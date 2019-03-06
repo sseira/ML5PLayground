@@ -39,10 +39,12 @@ let touchedBallSize = 40;
 let lastTouchedID = -1;
 let isFrozen = false;
 let isMagento = false;
+var canvas;
+
 
 function setup() {
   //createCanvas(640, 480);
-  createCanvas((window.innerHeight * (4/3)), window.innerHeight);
+  canvas = createCanvas(window.innerWidth, window.innerHeight);
   video = createCapture(VIDEO);
   video.size(width, height);
 
@@ -67,7 +69,7 @@ function setup() {
 }
 
 function modelReady() {
-  select('#status').html('Model Loaded');
+  // select('#status').html('Model Loaded');
 }
 
 function draw() {
@@ -76,7 +78,7 @@ function draw() {
   scale(-1.0,1.0);    // flip x-axis backwards
   image(video, 0, 0, width, height); //video on canvas, position, dimensions
 
-  
+
   // image(video, 0, 0, width, height);
 
   // We can call both functions to draw all keypoints and the skeletons
@@ -95,7 +97,7 @@ function addExample(label) {
   updateCounts();
 }
 
-// Update the example count for each label  
+// Update the example count for each label
 function updateCounts() {
   const counts = knnClassifier.getCountByLabel();
 
@@ -106,62 +108,91 @@ function updateCounts() {
 
 // A util function to create UI buttons
 function createButtons() {
-  // When the A button is pressed, add the current frame
-  // from the video with a label of "A" to the classifier
-  buttonA = select('#addClassA');
-  buttonA.mousePressed(function() {
-    addExample('A');
-  });
 
-  // When the B button is pressed, add the current frame
-  // from the video with a label of "B" to the classifier
-  buttonB = select('#addClassB');
-  buttonB.mousePressed(function() {
-    addExample('B');
-  });
+ greeting = createElement('h2', 'Collision Course');
+ greeting.position(20, 5);
 
-  buttonC = select('#addClassC');
-  buttonC.mousePressed(function() {
-    addExample('C');
-  });
+ //Buttons for training
+ //class A
+ btnA = select('#addClassA');
+ btnA.mousePressed(function() {
+   addExample('A');
+ });
+ btnA.position(10, 55);
 
-  // Reset buttons
-  resetBtnA = select('#resetA');
-  resetBtnA.mousePressed(function() {
-    clearLabel('A');
-  });
-  
-  resetBtnB = select('#resetB');
-  resetBtnB.mousePressed(function() {
-    clearLabel('B');
-  });
-  
+ resetA = select('#resetA');
+ resetA.mousePressed(function() {
+   clearLabel('A');
+ });
+ resetA.position(btnA.x + btnA.width, 55);
 
-  // Reset buttons
-  resetBtnA = select('#resetC');
-  resetBtnA.mousePressed(function() {
-    clearLabel('C');
-  });
-  
-  // Predict button
-  buttonPredict = select('#buttonPredict');
-  buttonPredict.mousePressed(classify);
+ expA = select('#exampleA')
+ expA.position(btnA.x + btnA.width + resetA.width + 5, 55);
 
-  // Clear all classes button
-  buttonClearAll = select('#clearAll');
-  buttonClearAll.mousePressed(clearAllLabels);
-  
-  
-  // // Load saved classifier dataset
-  // buttonSetData = select('#load');
-  // buttonSetData.mousePressed(loadMyKNN);
+ confA = select('#confidenceA')
+ confA.position(btnA.x + btnA.width + resetA.width + expA.width + 15, 55);
 
-  // // Get classifier dataset
-  // buttonGetData = select('#save');
-  // buttonGetData.mousePressed(saveMyKNN);
-  
-  
+ //class B
+ btnB = select('#addClassB');
+ btnB.mousePressed(function() {
+   addExample('B');
+ });
+ btnB.position(10, 75);
+
+ resetB = select('#resetB');
+ resetB.mousePressed(function() {
+   clearLabel('B');
+ });
+ resetB.position(btnB.x + btnB.width, 75);
+
+ expB = select('#exampleB')
+ expB.position(btnB.x + btnB.width + resetB.width + 5, 75);
+
+ confB = select('#confidenceB')
+ confB.position(btnB.x + btnB.width + resetB.width + expB.width + 15, 75);
+
+ //class C
+ btnC = select('#addClassC');
+ btnC.mousePressed(function() {
+   addExample('C');
+ });
+ btnC.position(10, 95);
+
+ resetC = select('#resetC');
+ resetC.mousePressed(function() {
+   clearLabel('C');
+ });
+ resetC.position(btnC.x + btnC.width, 95);
+
+ expC = select('#exampleC')
+ expC.position(btnC.x + btnC.width + resetC.width + 5, 95);
+
+ confC = select('#confidenceC')
+ confC.position(btnC.x + btnC.width + resetC.width + expC.width + 15, 95);
+
+
+ // Predict button
+ buttonPredict = select('#buttonPredict');
+ buttonPredict.mousePressed(classify);
+ buttonPredict.position(10, 115);
+
+ // Clear all classes button
+ buttonClearAll = select('#clearAll');
+ buttonClearAll.mousePressed(clearAllLabels);
+ buttonClearAll.position(buttonPredict.x + buttonPredict.width, 115);
+
+ //save and load
+ buttonLoad = select('#load');
+ buttonLoad.mousePressed(loadMyKNN);
+ buttonLoad.position(10, 135);
+
+ buttonSave = select('#save');
+ buttonSave.mousePressed(saveMyKNN);
+ buttonSave.position(buttonLoad.x + buttonLoad.width, 135);
+
+
 }
+
 
 // Predict the current frame.
 function classify() {
@@ -192,8 +223,6 @@ function gotResults(err, result) {
     // result.label is the label that has the highest confidence
     if (result.label) {
       currentPrediction = result.label;
-      select('#result').html(result.label);
-      select('#confidence').html(`${confidences[result.label] * 100} %`);
 
       if (currentPrediction == 'A') {
         if (!isFrozen) {
@@ -215,7 +244,6 @@ function gotResults(err, result) {
     select('#confidenceA').html(`${confidences['A'] ? confidences['A'] * 100 : 0} %`);
     select('#confidenceB').html(`${confidences['B'] ? confidences['B'] * 100 : 0} %`);
     select('#confidenceC').html(`${confidences['C'] ? confidences['C'] * 100 : 0} %`);
-
   }
 
   classify();
@@ -271,6 +299,7 @@ function drawBalls() {
     if (ball.status == 'untouched') {
       isGameOver = false
     }
+
     ball.collideWrists(leftWristPosition, rightWristPosition);
     ball.move();
     ball.display();
@@ -298,32 +327,32 @@ function drawKeypoints()  {
   for (let i = 0; i < poses.length; i++) {
     // For each pose detected, loop through all the keypoints
     let pose = poses[i].pose;
-    
+
     for (let j = 0; j < pose.keypoints.length; j++) {
-      
+
       let keypoint = pose.keypoints[j],
         	part = keypoint.part,
           score = keypoint.score,
           position = keypoint.position
-     
+
       // A keypoint is an object describing a body part (like rightArm or leftShoulder)
       // Only draw an ellipse is the pose probability is bigger than 0.2
       if (score > 0.2) {
-   			
+
         if (part == "leftWrist" || part == "rightWrist") {
-          
+
           if (part == "leftWrist") {
             leftWristPosition = position;
           } else {
             rightWristPosition = position;
           }
-          
+
           strokeWeight(4);
           stroke('rgb(255,231,66)');
           noFill();
           // point(position.x, position.y);
           ellipse(position.x, position.y, wristDiameter, wristDiameter);
-        
+
       	} else {
           // fill(0, 255, 0);
           strokeWeight(2);
@@ -365,7 +394,7 @@ class Ball {
   }
 
   // A right or left wrist collides with a ball
-  collideWrists(leftWristPosition, rightWristPosition) {	  
+  collideWrists(leftWristPosition, rightWristPosition) {
   	if (leftWristPosition) {
   	  this.touch(leftWristPosition);
   	}
@@ -373,14 +402,10 @@ class Ball {
   	  this.touch(rightWristPosition);
   	}
   }
-  
-
-
-
 
     // Change the properties of the ball on collision
   touch(wristPosition) {
-	  	
+
     let dx = wristPosition.x - this.x;
     let dy = wristPosition.y - this.y;
     let distance = sqrt(dx * dx + dy * dy);
@@ -426,7 +451,7 @@ class Ball {
         this.color = touchedColor;
     }
   }
-  
+
   collide() {
     for (let i = this.id + 1; i < numBalls; i++) {
       // console.log(others[i]);
@@ -498,19 +523,21 @@ class Ball {
     this.vy += gravity;
     this.x += this.vx;
     this.y += this.vy;
+   
     if (this.x + this.diameter / 2 > width) {
       this.x = width - this.diameter / 2;
-      this.vx *= friction;
+      this.vx  = -this.vx * 0.4 //*= friction;
     } else if (this.x - this.diameter / 2 < 0) {
       this.x = this.diameter / 2;
-      this.vx *= friction;
+      this.vx = -this.vx * 0.4 //*= friction;
     }
+
     if (this.y + this.diameter / 2 > height) {
       this.y = height - this.diameter / 2;
-      this.vy *= friction;
+      this.vy = -this.vy * 0.4 //*= friction;
     } else if (this.y - this.diameter / 2 < 0) {
       this.y = this.diameter / 2;
-      this.vy *= friction;
+      this.vy = -this.vy * 0.4 //*= friction;
     }
 
     if (isFrozen) {
@@ -536,3 +563,10 @@ class Ball {
   }
 }
 
+window.onresize = function() {
+  var w = window.innerWidth;
+  var h = window.innerHeight;
+  canvas.size(w,h);
+  width = w;
+  height = h;
+};
