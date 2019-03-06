@@ -317,7 +317,7 @@ function drawBalls() {
     ball.display();
   });
 
-  if (isGameOver) {
+  if (isGameOver && balls.length) {
     gameOver();
   }
 }
@@ -335,7 +335,10 @@ function gameOver() {
   textSize(100);
   textAlign(CENTER);
   fill (255,0,0);
+  // scale(1.0,1.0);    // flip x-axis backwards
   text("Game Over", window.innerHeight * (2/3), window.innerHeight / 2)
+  // scale(-1.0,1.0);    // flip x-axis backwards
+
 }
 
 // A function to draw ellipses over the detected keypoints
