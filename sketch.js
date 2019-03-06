@@ -17,7 +17,7 @@ let poses = [];
 let nose;
 let positionHistory = {}
 
-let numBalls = 2;
+let numBalls = 20;
 
 let spring = 0.02;
 let gravity = 0.01;
@@ -65,10 +65,7 @@ function setup() {
   touchedColor = color(255,0,0,204);      // color of balls once touched
   frozenColor = color(100,100,100, 100);
   magnetoColor = color(200, 100, 8, 100)
-  createButtons();
-
-  
-  addBalls();
+  createButtons();  
 }
 
 function modelReady() {
@@ -167,6 +164,8 @@ function createButtons() {
  });
  resetC.position(btnC.x + btnC.width, 95);
 
+
+
  expC = select('#exampleC')
  expC.position(btnC.x + btnC.width + resetC.width + 5, 95);
 
@@ -189,9 +188,18 @@ function createButtons() {
  buttonLoad.mousePressed(loadMyKNN);
  buttonLoad.position(10, 135);
 
+
+
  buttonSave = select('#save');
  buttonSave.mousePressed(saveMyKNN);
  buttonSave.position(buttonLoad.x + buttonLoad.width, 135);
+
+ buttonAdd = select('#addBalls');
+ buttonAdd.position(10, 155);
+ buttonAdd.mousePressed(function() {
+  addBalls()
+ });
+ 
 
 
 }
@@ -235,7 +243,7 @@ function gotResults(err, result) {
             isFrozen = false;
           }, 3000)
         }
-      } else if (currentPrediction == 'B' && confidences[result.label]>.9) {
+      } else if (currentPrediction == 'B') {
         isMagento = true
         setTimeout(() => {
             isMagento = false;
@@ -357,12 +365,13 @@ function drawKeypoints()  {
           // point(position.x, position.y);
           ellipse(position.x, position.y, wristDiameter, wristDiameter);
 
-      	} else {
-          // fill(0, 255, 0);
-          strokeWeight(2);
-          stroke('rgb(0,0,255)');
-          point(position.x, position.y);
-        }
+      	} 
+        // else {
+        //   // fill(0, 255, 0);
+        //   strokeWeight(2);
+        //   stroke('rgb(0,0,255)');
+        //   point(position.x, position.y);
+        // }
 
       }
     }
@@ -463,6 +472,7 @@ class Ball {
 	  // animate the ball to disappear
 	  if (this.status != "destroyed" && (frameCount % 10 == 0 && timer > 0)) {
 		  this.diameter = this.diameter / 2;
+      this.vy = -10;
 		  timer--;
 	  }
 	  
@@ -503,7 +513,7 @@ class Ball {
     if (this.color == untouchedColor) {
       this.vy = this.vy/2
       this.vx = this.vx/2
-      fill(frozenColor)
+      // fill(frozenColor)
       this.color = frozenColor
     }
   }
@@ -523,16 +533,16 @@ class Ball {
     }
 
     if (this.color == untouchedColor) {
-        this.vx = (closestWristPosition.x - this.x)/100
-        this.vy = (closestWristPosition.y - this.y)/100
+        this.vx = (closestWristPosition.x - this.x)/50
+        this.vy = (closestWristPosition.y - this.y)/50
         fill(magnetoColor)
         this.color = magnetoColor
     }
   }
 
   repello() {
-    this.vy = -this.vy*3
-    this.vx = -this.vx*3
+    // this.vy = -this.vy*3
+    // this.vx = -this.vx*3
     this.restoreColor()
   }
 
